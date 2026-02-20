@@ -1,0 +1,88 @@
+package com.arman.gamegpt;
+
+import android.os.Bundle;
+import android.view.View;
+import android.widget.Button;
+import android.widget.EditText;
+import android.widget.ScrollView;
+import android.widget.TextView;
+import androidx.appcompat.app.AppCompatActivity;
+import okhttp3.*;
+import org.json.JSONObject;
+import java.io.IOException;
+
+public class MainActivity extends AppCompatActivity {
+
+    private final String API_KEY = "AIzaSyDEWhiJ7IyQ82tKXRhopXGFZy_AC1lKkTo";
+    private final String OWNER_PASS = "11armanjot44";
+    private TextView chatLog;
+    private EditText userInput;
+    private ScrollView scrollView;
+
+    @Override
+    protected void onCreate(Bundle savedInstanceState) {
+        super.onCreate(savedInstanceState);
+        setContentView(R.layout.activity_main);
+
+        chatLog = findViewById(R.id.chatLog);
+        userInput = findViewById(R.id.userInput);
+        scrollView = findViewById(R.id.scrollView);
+        Button sendBtn = findViewById(R.id.sendBtn);
+
+        chatLog.setText("--- GAMEGPT PRO AI ---\nOwner: Armanjot Singh\nStatus: Online\n");
+
+        sendBtn.setOnClickListener(v -> {
+            String msg = userInput.getText().toString().trim();
+            if (!msg.isEmpty()) {
+                if (msg.equals(OWNER_PASS)) {
+                    chatLog.append("\n[SYSTEM]: PRO MODE UNLOCKED. Welcome Boss!");
+                } else {
+                    chatLog.append("\nYOU: " + msg);
+                    askGemini(msg);
+                }
+                userInput.setText("");
+                autoScroll();
+            }
+        });
+    }
+
+    private void askGemini(String query) {
+        chatLog.append("\nAI: Thinking...");
+        OkHttpClient client = new OkHttpClient();
+        String json = "{\"contents\":[{\"parts\":[{\"text\":\"" + query + "\"}]}]}";
+        
+        RequestBody body = RequestBody.create(json, MediaType.parse("application/json"));
+        Request request = new Request.Builder()
+                .url("https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=" + API_KEY)
+                .post(body).build();
+
+        client.newCall(request).enqueue(new Callback() {
+            @Override
+            public void onFailure(Call call, IOException e) {
+                runOnUiThread(() -> chatLog.append("\nAI: Connection Error!"));
+            }
+
+            @Override
+            public void onResponse(Call call, Response response) throws IOException {
+                try {
+                    String res = response.body().string();
+                    JSONObject jo = new JSONObject(res);
+                    String reply = jo.getJSONArray("candidates").getJSONObject(0)
+                                     .getJSONObject("content").getJSONArray("parts")
+                                     .getJSONObject(0).getString("text");
+                    runOnUiThread(() -> {
+                        chatLog.append("\nAI: " + reply);
+                        autoScroll();
+                    });
+                } catch (Exception e) {
+                    runOnUiThread(() -> chatLog.append("\nAI: Server Busy. Try later."));
+                }
+            }
+        });
+    }
+
+    private void autoScroll() {
+        scrollView.post(() -> scrollView.fullScroll(View.FOCUS_DOWN));
+    }
+}
+
