@@ -1,0 +1,111 @@
+import requests
+from kivy.app import App
+from kivy.uix.boxlayout import BoxLayout
+from kivy.uix.label import Label
+from kivy.uix.textinput import TextInput
+from kivy.uix.button import Button
+from kivy.uix.scrollview import ScrollView
+from kivy.core.window import Window
+from kivy.utils import get_color_from_hex
+
+# --- Pro Configuration ---
+API_KEY = "AIzaSyDEWhiJ7IyQ82tKXRhopXGFZy_AC1lKkTo"
+OWNER_PASS = "11armanjot44"
+WA_LINK = "https://wa.me/919056676842?text=I%20want%20to%20buy%20GameGPT%20Pro"
+
+class GameGPTPro(App):
+    def build(self):
+        # Dark Theme Background
+        Window.clearcolor = get_color_from_hex('#0a0a0a')
+        
+        self.layout = BoxLayout(orientation='vertical', padding=20, spacing=15)
+        
+        # Header Section
+        header = Label(
+            text="[b]GAMEGPT PRO AI[/b]", 
+            markup=True,
+            font_size='32sp', 
+            color=get_color_from_hex('#FFD700'), 
+            size_hint_y=0.1
+        )
+        self.layout.add_widget(header)
+        
+        # Chat History Display
+        self.scroll = ScrollView(size_hint_y=0.65)
+        self.chat_log = Label(
+            text="[color=888888]System: AI Connected. Welcome Boss![/color]\n",
+            markup=True,
+            size_hint_y=None,
+            halign='left',
+            valign='top',
+            padding=(15, 15)
+        )
+        self.chat_log.bind(texture_size=self.chat_log.setter('size'))
+        self.scroll.add_widget(self.chat_log)
+        self.layout.add_widget(self.scroll)
+        
+        # Input Box
+        self.user_input = TextInput(
+            hint_text="Type your message here...",
+            multiline=False,
+            size_hint_y=0.1,
+            background_color=get_color_from_hex('#1e1e1e'),
+            foreground_color=get_color_from_hex('#ffffff'),
+            cursor_color=get_color_from_hex('#FFD700'),
+            padding=(10, 10)
+        )
+        self.layout.add_widget(self.user_input)
+        
+        # Action Buttons
+        btn_box = BoxLayout(size_hint_y=0.1, spacing=10)
+        
+        send_btn = Button(
+            text="SEND", 
+            background_color=get_color_from_hex('#FFD700'),
+            color=(0,0,0,1),
+            bold=True
+        )
+        send_btn.bind(on_press=self.process_query)
+        
+        buy_btn = Button(
+            text="BUY PREMIUM", 
+            background_color=get_color_from_hex('#25D366'),
+            bold=True
+        )
+        buy_btn.bind(on_press=lambda x: self.open_link(WA_LINK))
+        
+        btn_box.add_widget(send_btn)
+        btn_box.add_widget(buy_btn)
+        self.layout.add_widget(btn_box)
+        
+        return self.layout
+
+    def process_query(self, instance):
+        query = self.user_input.text.strip()
+        if not query: return
+        
+        # Admin Unlock
+        if query == OWNER_PASS:
+            self.chat_log.text += "\n[color=FFD700]System: Pro Mode Activated for Owner.[/color]\n"
+            self.user_input.text = ""
+            return
+
+        self.chat_log.text += f"\n[b]YOU:[/b] {query}"
+        self.user_input.text = ""
+        
+        # AI Response logic
+        try:
+            url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key={API_KEY}"
+            payload = {"contents": [{"parts": [{"text": query}]}]}
+            response = requests.post(url, json=payload)
+            ai_ans = response.json()['candidates'][0]['content']['parts'][0]['text']
+            self.chat_log.text += f"\n[color=FFD700][b]AI:[/b][/color] {ai_ans}\n"
+        except:
+            self.chat_log.text += "\n[color=ff4444]System: Server Busy. Buy Pro for priority access.[/color]\n"
+
+    def open_link(self, link):
+        import webbrowser
+        webbrowser.open(link)
+
+if __name__ == '__main__':
+    GameGPTPro().run()
